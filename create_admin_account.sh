@@ -63,12 +63,6 @@ if [[ -z "$ADMIN_PASSWORD" || "$ADMIN_PASSWORD" == "." ]]; then
 	echo "Set to default admin password"
 fi
 
-# Install requirements
-if [ ! -f /usr/local/bin/json2hcl ]; then
-	echo "Error! Please install json to hcl (json2hcl) utility"	
-	exit 3
-fi
-
 # 1) Enable LOCAL authentication
 echo "Enable LOCAL authentication..."
 ret=$(curl -SsL \
