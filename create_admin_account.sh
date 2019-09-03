@@ -70,7 +70,7 @@ if [ ! -f /usr/local/bin/json2hcl ]; then
 fi
 
 # 1) Enable LOCAL authentication
-echo "Enable LOCAL authentication"
+echo "Enable LOCAL authentication..."
 ret=$(curl -SsL \
 	-H "X-Vault-Token: $VAULT_TOKEN" \
 	-X POST \
@@ -91,10 +91,13 @@ fi
 # 2) Create the admin policy
 
 # 2.1) Use vault to compose the curl command with the hcl policy
+echo "Exporting \"VAULT_ADDR=$VAULT_URL\" (to be able to execute a vault command)"
+export VAULT_ADDR=$VAULT_URL
+echo "Building the curl command to create the admin policy with input from policy .hcl file..."
 curlpolcmd=$(vault policy write -output-curl-string $ADMIN_POLICY_NAME $ADMIN_POLICY_FILENAME)
 curlpolcmd2="${curlpolcmd/'$(vault print token)'/$VAULT_TOKEN} -SsL -w \"$_HTTP_RET_CODE_LABEL %{http_code}\n\" -k"
 
-echo "Create admin policy"
+echo "Create admin policy..."
 ret=$(eval $curlpolcmd2)
 
 if [[ $ret == *"$_HTTP_RET_CODE_LABEL 2"* ]]; then
@@ -106,7 +109,7 @@ else
 fi
 
 # 3) Create an admin local account with admin policy
-echo "Create a local admin user with admin policy"
+echo "Create a local admin user with admin policy..."
 ret=$(curl --silent --location \
 	--header "X-Vault-Token: $VAULT_TOKEN" \
 	--header "Content-Type: application/json" \
