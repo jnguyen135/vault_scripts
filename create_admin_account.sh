@@ -22,13 +22,13 @@ ADMIN_PASSWORD=$6
 # Usage
 if [[ "$1" == "h" || "$1" == "help" || " $1" == "--help" || -z "$VAULT_TOKEN" || "$VAULT_TOKEN" == "." ]]; then
 	echo "Usage: $0 <Vault Token> <Vault URL> <admin policy filename> <admin policy name> <admin username> <admin password>"
-	echo "       Use . for the default value for any parameter but the 2nd argument <Vault Token> must be specified"
+	echo "       Use . for the default value at any parameter but the 1st argument <Vault Token> must be specified"
 	exit 1
 fi
 
 if [[ -z "$VAULT_URL" || "$VAULT_URL" == "." ]]; then
 	VAULT_URL=$DEFAULT_VAULT_URL
-	echo "Set to default admin username: $VAULT_URL"
+	echo "Set to default vault URL: $VAULT_URL"
 else
 	echo "VAULT_URL = $VAULT_URL"
 fi
@@ -39,6 +39,7 @@ if [[ -z "$ADMIN_POLICY_FILENAME" || "$ADMIN_POLICY_FILENAME" == "." ]]; then
 else
 	echo "ADMIN_POLICY_FILENAME = $ADMIN_POLICY_FILENAME"
 fi
+
 if [[ ! -f "$ADMIN_POLICY_FILENAME" ]]; then
 	echo "Error! file $ADMIN_POLICY_FILENAME does not exist"
 	exit 2
