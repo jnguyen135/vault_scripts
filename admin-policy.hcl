@@ -5,6 +5,7 @@
 # -Create and manage ACL policies broadly across Vault
 # -Read system health check
 # -Mount and manage audit devices broadly accross Vault
+# -Calculate hmac-sha256 of strings to search for strings in the audit logs
 
 # Manage auth backends broadly across Vault
 path "auth/*"
@@ -60,8 +61,19 @@ path "sys/capabilities-self"
   capabilities = ["create", "update"]
 }
 
-# List, create, update, audit logs broadly across Vault 
+# To list audits
+path "sys/audit"
+{
+  capabilities = ["read"]
+}
+
+# create and manage audit logs broadly across Vault
 path "sys/audit/*"
 {
-  capabilities = ["create", "read", "update", "list", "sudo"]
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# To calculate hmac-sha256
+path "sys/audit-hash/*" {
+  capabilities = ["create", "update"]
 }
