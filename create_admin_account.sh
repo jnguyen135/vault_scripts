@@ -80,39 +80,48 @@ if [[ $ret == *"$_HTTP_RET_CODE_LABEL 2"* || $ret ==  *"path is already in use a
 else
 	echo "Error in enabling LOCAL authentication: "
 	echo $ret
-	exit 4
+	exit 3
 fi
 
 # 2) Create the admin policy
 
-# 2.1) Use vault to compose the curl command with the hcl policy
-echo "Exporting \"VAULT_ADDR=$VAULT_URL\" (to be able to execute a vault command)"
-export VAULT_ADDR=$VAULT_URL
-echo "Building the curl command to create the admin policy with input from policy .hcl file..."
-curlpolcmd=$(vault policy write -output-curl-string $ADMIN_POLICY_NAME $ADMIN_POLICY_FILENAME)
-curlpolcmd2="${curlpolcmd/'$(vault print token)'/$VAULT_TOKEN} -SsL -w \"$_HTTP_RET_CODE_LABEL %{http_code}\n\" -k"
+# 2.1) Create payload json policy file
+nlconv=$(awk '{printf "%s\\n", $0}' $ADMIN_POLICY_FILENAME)
 
-echo "Create admin policy..."
-ret=$(eval $curlpolcmd2)
+fullconv=$(echo $nlconv | sed 's/"/\\"/g')
+
+printf "{\"policy\":\"" > $ADMIN_POLICY_FILENAME.payload.json
+echo $fullconv >> $ADMIN_POLICY_FILENAME.payload.json
+echo "\"}" >> $ADMIN_POLICY_FILENAME.payload.json
+
+echo "Created payload $ADMIN_POLICY_FILENAME.payload.json"
+
+ret=$(curl -SsL \
+	-H "X-Vault-Token: $VAULT_TOKEN" \
+	-X PUT \
+	-d @"$ADMIN_POLICY_FILENAME.payload.json" \
+	-w "$_HTTP_RET_CODE_LABEL %{http_code}\n" \
+	"$VAULT_URL/v1/sys/policies/acl/$ADMIN_POLICY_NAME" \
+	-k \
+)
 
 if [[ $ret == *"$_HTTP_RET_CODE_LABEL 2"* ]]; then
 	echo "admin policy created"
 else
 	echo "Error in creating admin policy: "
 	echo $ret
-	exit 5
+	exit 4
 fi
 
 # 3) Create an admin local account with admin policy
 echo "Create a local admin user with admin policy..."
-ret=$(curl --silent --location \
-	--header "X-Vault-Token: $VAULT_TOKEN" \
-	--header "Content-Type: application/json" \
-	--request POST "$VAULT_URL/v1/auth/userpass/users/$ADMIN_USERNAME" \
-	--insecure \
-	--data "{ \"password\": \"$ADMIN_PASSWORD\", \
-		  \"policies\": \"$ADMIN_POLICY_NAME,default\" }" \
-	--write-out "$_HTTP_RET_CODE_LABEL %{http_code}\n" \
+ret=$(curl -SsL \
+	-H "X-Vault-Token: $VAULT_TOKEN" \
+	-X POST "$VAULT_URL/v1/auth/userpass/users/$ADMIN_USERNAME" \
+	-d "{ \"password\": \"$ADMIN_PASSWORD\", \
+	      \"policies\": \"$ADMIN_POLICY_NAME,default\" }" \
+	-w "$_HTTP_RET_CODE_LABEL %{http_code}\n" \
+	-k \
 )
 
 if [[ $ret == "$_HTTP_RET_CODE_LABEL 2"* ]]; then
@@ -120,5 +129,5 @@ if [[ $ret == "$_HTTP_RET_CODE_LABEL 2"* ]]; then
 else
 	echo "Error in creating local admin user: "
 	echo $ret
-	exit 6
+	exit 5
 fi
