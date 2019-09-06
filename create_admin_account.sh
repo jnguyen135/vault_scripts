@@ -124,7 +124,7 @@ ret=$(curl -SsL \
 	-k \
 )
 
-if [[ $ret == "$_HTTP_RET_CODE_LABEL 2"* ]]; then
+if [[ $ret == *"$_HTTP_RET_CODE_LABEL 2"* ]]; then
 	echo "local admin user created"
 else
 	echo "Error in creating local admin user: "

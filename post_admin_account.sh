@@ -8,6 +8,10 @@
 DEFAULT_VAULT_URL="http://127.0.0.1:8200"
 DEFAULT_ADMIN_USERNAME="admin"
 _HTTP_RET_CODE_LABEL="HTTP return code:"
+DEFAULT_AUDIT_SYSLOG_FACILITY="AUTH"
+DEFAULT_AUDIT_SYSLOG_TAG="vault"
+DEFAULT_AUDIT_SOCKET_ADDRESS="127.0.0.1:9090"
+DEFAULT_AUDIT_SOCKET_TYPE="tcp"
 
 # arguments
 VAULT_URL=$1
@@ -138,58 +142,203 @@ hmac_sha256() {
 	echo $hmac_sha256_val
 }
 
-enable_audit_file() {
-	echo "Enable audit file"
-	read -p "Enter the audit path (name of audit): " auditpath
-	read -p "Enter the audit file path: " auditfilepath
+enable_audit_type() {
 
-	ret=$(curl -SsL \
-		-H "X-Vault-Token: $VAULT_TOKEN" \
-		-X PUT \
-		-d "{\"type\":\"file\",\"options\":{\"file_path\":\"$auditfilepath\"}}" \
-		"$VAULT_URL/v1/sys/audit/$auditpath" \
-	)
+	type=$1
 
-	if [[ $ret != "" ]]; then
-		echo "Error in enabling audit -file"
-		echo $ret
-	fi
+	case $type in
+		"file")
+			read -p "Enter the audit path (name of audit): " auditpath
+			read -p "Enter the audit file path: " auditfilepath
+			read -p "Log sensitive data without hasing, in the raw format (false): " lograw
+
+			if [[ $lograw != "true" ]]; then
+				lograw="false"
+				echo "log raw is set to $lograw"
+			fi
+
+			ret=$(curl -SsL \
+				-H "X-Vault-Token: $VAULT_TOKEN" \
+				-X PUT \
+				-d "{\"type\":\"file\",\"options\":{\"file_path\":\"$auditfilepath\",\"log_raw\":\"$lograw\"}}" \
+				"$VAULT_URL/v1/sys/audit/$auditpath" \
+			)
+
+			if [[ $ret != "" ]]; then
+				echo "Error in enabling audit file"
+				echo $ret
+			fi
+			;;
+		"syslog")
+			read -p "Enter the facility ($DEFAULT_AUDIT_SYSLOG_FACILITY): " facility
+			read -p "Enter the tag ($DEFAULT_AUDIT_SYSLOG_TAG): " tag
+			read -p "Log sensitive data without hasing, in the raw format (false): " lograw
+
+			if [[ $lograw != "true" ]]; then
+				lograw="false"
+				echo "log raw is set to $lograw"
+			fi
+
+			if [[ $facility == "" ]]; then
+				facility=$DEFAULT_AUDIT_SYSLOG_FACILITY
+				echo "facility is set to $facility"
+			fi
+			if [[ $tag == "" ]]; then
+				tag=$DEFAULT_AUDIT_SYSLOG_TAG
+				echo "tag is set to $tag"
+			fi
+
+			ret=$(curl -SsL \
+				-H "X-Vault-Token: $VAULT_TOKEN" \
+				-X PUT \
+				-d "{\"type\":\"syslog\",\"options\":{\"facility\":\"$facility\",\"tag\":\"$tag\",\"log_raw\":\"$lograw\"}}" \
+				"$VAULT_URL/v1/sys/audit/syslog" \
+			)
+
+			if [[ $ret != "" ]]; then
+				echo "Error in enabling audit syslog"
+				echo $ret
+			fi
+			;;
+		"socket")
+			read -p "Enter the address ($DEFAULT_AUDIT_SOCKET_ADDRESS): " address
+			read -p "Enter the socket type (tcp): " sockettype
+			read -p "Log sensitive data without hasing, in the raw format (false): " lograw
+
+			if [[ $lograw != "true" ]]; then
+				lograw="false"
+				echo "log raw is set to $lograw"
+			fi
+
+			if [[ $address == "" ]]; then
+				address=$DEFAULT_AUDIT_SOCKET_ADDRESS
+				echo "address is set to $address"
+			fi
+			if [[ $sockettype == "" ]]; then
+				sockettype=$DEFAULT_AUDIT_SOCKET_TYPE
+				echo "socket type is set to $sockettype"
+			fi
+
+			ret=$(curl -SsL \
+				-H "X-Vault-Token: $VAULT_TOKEN" \
+				-X PUT \
+				-d "{\"type\":\"socket\",\"options\":{\"address\":\"$address\",\"socket_type\":\"$sockettype\",\"log_raw\":\"$lograw\"}}" \
+				"$VAULT_URL/v1/sys/audit/socket" \
+			)
+
+			if [[ $ret != "" ]]; then
+				echo "Error in enabling audit socket"
+				echo $ret
+			fi
+			;;
+	esac
 }
 
+enable_audit() {
+	echo "Enable audit"
 
-disable_audit_file() {
-	echo "Disable audit file"
-	read -p "Enter the audit path (name of audit): " auditpath
-
-	ret=$(curl -SsL \
-		-H "X-Vault-Token: $VAULT_TOKEN" \
-		-X DELETE \
-		"$VAULT_URL/v1/sys/audit/$auditpath" \
-	)
-
-	if [[ $ret != "" ]]; then
-		echo "Error in enabling audit -file"
-		echo $ret
-	fi
+	PS3='Please enter your choice: '
+	opts=("File" "Syslog" "Socket" "Return to main menu")
+	select o in "${opts[@]}"
+	do
+		case $o in
+			"File")
+			enable_audit_type "file"
+			break;
+			;;
+			"Syslog")
+			enable_audit_type "syslog"
+			break;
+			;;
+			"Socket")
+			enable_audit_type "socket"
+			break;
+			;;
+			"Return to main menu")
+			break
+			;;
+		esac
+	done
 }
 
-list_file_audit()
+disable_audit_type() {
+
+	type=$1
+
+	case $type in
+		"file")
+		read -p "Enter the audit path (name of audit): " auditpath
+
+		ret=$(curl -SsL \
+			-H "X-Vault-Token: $VAULT_TOKEN" \
+			-X DELETE \
+			"$VAULT_URL/v1/sys/audit/$auditpath" \
+		)
+
+		if [[ $ret != "" ]]; then
+			echo "Error in disabling audit file"
+			echo $ret
+		fi
+		;;
+		"syslog"|"socket")
+		ret=$(curl -SsL \
+			-H "X-Vault-Token: $VAULT_TOKEN" \
+			-X DELETE \
+			"$VAULT_URL/v1/sys/audit/$type" \
+		)
+
+		if [[ $ret != "" ]]; then
+			echo "Error in disabling audit $type"
+			echo $ret
+		fi
+		;;
+	esac
+}
+
+disable_audit() {
+	echo "Disable audit"
+
+	PS3='Please enter your choice: '
+	opts=("File" "Syslog" "Socket" "Return to main menu")
+	select o in "${opts[@]}"
+	do
+		case $o in
+			"File")
+			disable_audit_type "file"
+			break;
+			;;
+			"Syslog")
+			disable_audit_type "syslog"
+			break;
+			;;
+			"Socket")
+			disable_audit_type "socket"
+			break;
+			;;
+			"Return to main menu")
+			break
+			;;
+		esac
+	done
+}
+
+list_audits()
 {
-	echo "List file audits"
+	echo "List audits"
 	
 	ret=$(curl -SsL \
 		-H "X-Vault-Token: $VAULT_TOKEN" \
 		"$VAULT_URL/v1/sys/audit" \
 	)
 
-	echo $ret | jq
+	echo $ret
 }
 
 # inputs
 PS3='Please enter your choice: '
 options=("Login" "Change User's Password" "List Users" "Show policies" \
-	 "Display a policy" "List file audits" "Enable audit file" \
-	 "Disable audit file" "Calculate hmac-sha256" "Quit")
+	 "Display a policy" "List audits" "Enable audit" \
+	 "Disable audit" "Calculate hmac-sha256" "Quit")
 select opt in "${options[@]}"
 do
 	case $opt in
@@ -208,14 +357,14 @@ do
 		"Display a policy")
 			display_a_policy
 			;;
-		"List file audits")
-			list_file_audit
+		"List audits")
+			list_audits
 			;;
-		"Enable audit file")
-			enable_audit_file
+		"Enable audit")
+			enable_audit
 			;;
-		"Disable audit file")
-			disable_audit_file
+		"Disable audit")
+			disable_audit
 			;;
 		"Calculate hmac-sha256")
 			hmac_sha256
