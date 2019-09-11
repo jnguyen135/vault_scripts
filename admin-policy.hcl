@@ -64,7 +64,7 @@ path "sys/capabilities-self"
 # To list audits
 path "sys/audit"
 {
-  capabilities = ["read"]
+  capabilities = ["read", "sudo"]
 }
 
 # create and manage audit logs broadly across Vault
