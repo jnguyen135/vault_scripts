@@ -8,7 +8,7 @@ DEFAULT_VAULT_URL="http://127.0.0.1:8200"
 DEFAULT_ADMIN_POLICY_FILENAME="admin-policy.hcl"
 DEFAULT_ADMIN_POLICY_NAME="admins"
 DEFAULT_ADMIN_USERNAME="admin"
-DEFAULT_ADMIN_PASSWORD="password"
+DEFAULT_ADMIN_PASSWORD="admin"
 _HTTP_RET_CODE_LABEL="HTTP return code:"
 
 # inputs
@@ -104,6 +104,11 @@ ret=$(curl -SsL \
 	"$VAULT_URL/v1/sys/policies/acl/$ADMIN_POLICY_NAME" \
 	-k \
 )
+
+# cleanup created file
+if [[ -f "$ADMIN_POLICY_FILENAME.payload.json" ]]; then
+	rm "$ADMIN_POLICY_FILENAME.payload.json"
+fi
 
 if [[ $ret == *"$_HTTP_RET_CODE_LABEL 2"* ]]; then
 	echo "admin policy created"
